@@ -31,7 +31,7 @@ function runBuild() {
 async function build(sdk, params, headers) {
   // Start the build
   const req = sdk.codeBuild.startBuild(params);
-  req.on("build", req => {
+  req.on("build", (req) => {
     req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
   });
 
@@ -56,13 +56,18 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
 
   let errObject = false;
 
-  const batchGetBuilds = codeBuild.batchGetBuilds({ ids: [id]});
-  batchGetBuilds.on("build", req => {
+  const batchGetBuilds = codeBuild.batchGetBuilds({ ids: [id] });
+  batchGetBuilds.on("build", (req) => {
     req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
   });
 
-  const getLogEvents = cloudWatchLogs.getLogEvents({ logGroupName, logStreamName, startFromHead, nextToken });
-  getLogEvents.on("build", req => {
+  const getLogEvents = cloudWatchLogs.getLogEvents({
+    logGroupName,
+    logStreamName,
+    startFromHead,
+    nextToken,
+  });
+  getLogEvents.on("build", (req) => {
     req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
   });
 
@@ -70,7 +75,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
   const [batch, cloudWatch = {}] = await Promise.all([
     batchGetBuilds.promise(),
     // The CloudWatchLog _may_ not be set up, only make the call if we have a logGroupName
-    logGroupName && getLogEvents.promise()
+    logGroupName && getLogEvents.promise(),
   ]).catch((err) => {
     errObject = err;
     /* Returning [] here so that the assignment above
@@ -146,7 +151,9 @@ function githubInputs() {
     "x-github-secret": process.env["GITHUB_SECRET"],
     "x-github-sha": sourceVersion,
     "x-github-ref": process.env["GITHUB_REF"],
-    "x-github-action-id": process.env["GITHUB_RUN_ID"]
+    "x-github-action-id": process.env["GITHUB_RUN_ID"],
+    "x-github-repository": repo,
+    "x-github-organization": owner,
   };
 
   const envPassthrough = core
@@ -161,7 +168,7 @@ function githubInputs() {
     // repo,
     // sourceVersion,
     envPassthrough,
-    headers
+    headers,
   };
 }
 
@@ -197,26 +204,25 @@ function inputs2Parameters(inputs) {
 }
 
 function buildSdk() {
-  const endpoint = { endpoint: core.getInput("endpoint") };
-  const useCredentials = core.getInput("use_credentials", { required: false }) ?? true;
+  const endpoint = { endpoint: core.getInput("endpoint", { required: false }) };
+  const noCredentials = !core.getInput("use_credentials", { required: false });
 
   const codeBuild = new aws.CodeBuild({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
-    ...endpoint
+    ...endpoint,
   });
 
   const cloudWatchLogs = new aws.CloudWatchLogs({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
-    ...endpoint
+    ...endpoint,
   });
 
-  if (useCredentials) {
+  if (!noCredentials) {
     assert(
       codeBuild.config.credentials && cloudWatchLogs.config.credentials,
       "No credentials. Try adding @aws-actions/configure-aws-credentials earlier in your job to set up AWS credentials."
     );
   }
-
 
   return { codeBuild, cloudWatchLogs };
 }
