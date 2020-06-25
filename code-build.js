@@ -21,20 +21,27 @@ function runBuild() {
   const sdk = buildSdk();
 
   // Get input options for startBuild
-  const params = inputs2Parameters(githubInputs());
+  const inputs = githubInputs();
+  const { headers } = inputs;
+  const params = inputs2Parameters(inputs);
 
-  return build(sdk, params);
+  return build(sdk, params, headers);
 }
 
-async function build(sdk, params) {
+async function build(sdk, params, headers) {
   // Start the build
-  const start = await sdk.codeBuild.startBuild(params).promise();
+  const req = sdk.codeBuild.startBuild(params);
+  req.on("build", req => {
+    req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
+  });
+
+  const start = await req.promise();
 
   // Wait for the build to "complete"
-  return waitForBuildEndTime(sdk, start.build);
+  return waitForBuildEndTime(sdk, start.build, null, headers);
 }
 
-async function waitForBuildEndTime(sdk, { id, logs }, nextToken) {
+async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
   const {
     codeBuild,
     cloudWatchLogs,
@@ -49,14 +56,21 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken) {
 
   let errObject = false;
 
+  const batchGetBuilds = codeBuild.batchGetBuilds({ ids: [id]});
+  batchGetBuilds.on("build", req => {
+    req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
+  });
+
+  const getLogEvents = cloudWatchLogs.getLogEvents({ logGroupName, logStreamName, startFromHead, nextToken });
+  getLogEvents.on("build", req => {
+    req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
+  });
+
   // Check the state
   const [batch, cloudWatch = {}] = await Promise.all([
-    codeBuild.batchGetBuilds({ ids: [id] }).promise(),
+    batchGetBuilds.promise(),
     // The CloudWatchLog _may_ not be set up, only make the call if we have a logGroupName
-    logGroupName &&
-      cloudWatchLogs
-        .getLogEvents({ logGroupName, logStreamName, startFromHead, nextToken })
-        .promise(),
+    logGroupName && getLogEvents.promise()
   ]).catch((err) => {
     errObject = err;
     /* Returning [] here so that the assignment above
@@ -80,7 +94,8 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken) {
       return waitForBuildEndTime(
         { ...sdk, wait: newWait },
         { id, logs },
-        nextToken
+        nextToken,
+        headers
       );
     } else {
       //The error returned from the API wasn't about rate limiting, so throw it as an actual error and fail the job
@@ -105,7 +120,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken) {
   await new Promise((resolve) => setTimeout(resolve, wait));
 
   // Try again
-  return waitForBuildEndTime(sdk, current, nextForwardToken);
+  return waitForBuildEndTime(sdk, current, nextForwardToken, headers);
 }
 
 function githubInputs() {
@@ -124,8 +139,15 @@ function githubInputs() {
       : process.env[`GITHUB_SHA`];
 
   assert(sourceVersion, "No source version could be evaluated.");
-  const buildspecOverride =
-    core.getInput("buildspec-override", { required: false }) || undefined;
+  // const buildspecOverride =
+  //   core.getInput("buildspec-override", { required: false }) || undefined;
+
+  const headers = {
+    "x-github-secret": process.env["GITHUB_SECRET"],
+    "x-github-sha": sourceVersion,
+    "x-github-ref": process.env["GITHUB_REF"],
+    "x-github-action-id": process.env["GITHUB_RUN_ID"]
+  };
 
   const envPassthrough = core
     .getInput("env-vars-for-codebuild", { required: false })
@@ -135,26 +157,26 @@ function githubInputs() {
 
   return {
     projectName,
-    owner,
-    repo,
-    sourceVersion,
-    buildspecOverride,
+    // owner,
+    // repo,
+    // sourceVersion,
     envPassthrough,
+    headers
   };
 }
 
 function inputs2Parameters(inputs) {
   const {
     projectName,
-    owner,
-    repo,
-    sourceVersion,
-    buildspecOverride,
+    // owner,
+    // repo,
+    // sourceVersion,
+    // buildspecOverride,
     envPassthrough = [],
   } = inputs;
 
-  const sourceTypeOverride = "GITHUB";
-  const sourceLocationOverride = `https://github.com/${owner}/${repo}.git`;
+  // const sourceTypeOverride = "GITHUB";
+  // const sourceLocationOverride = `https://github.com/${owner}/${repo}.git`;
 
   const environmentVariablesOverride = Object.entries(process.env)
     .filter(
@@ -166,27 +188,35 @@ function inputs2Parameters(inputs) {
   // This way the GitHub events can manage the builds.
   return {
     projectName,
-    sourceVersion,
-    sourceTypeOverride,
-    sourceLocationOverride,
-    buildspecOverride,
+    // sourceVersion,
+    // sourceTypeOverride,
+    // sourceLocationOverride,
+    // buildspecOverride,
     environmentVariablesOverride,
   };
 }
 
 function buildSdk() {
+  const endpoint = { endpoint: core.getInput("endpoint") };
+  const useCredentials = core.getInput("use_credentials", { required: false }) ?? true;
+
   const codeBuild = new aws.CodeBuild({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
+    ...endpoint
   });
 
   const cloudWatchLogs = new aws.CloudWatchLogs({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
+    ...endpoint
   });
 
-  assert(
-    codeBuild.config.credentials && cloudWatchLogs.config.credentials,
-    "No credentials. Try adding @aws-actions/configure-aws-credentials earlier in your job to set up AWS credentials."
-  );
+  if (useCredentials) {
+    assert(
+      codeBuild.config.credentials && cloudWatchLogs.config.credentials,
+      "No credentials. Try adding @aws-actions/configure-aws-credentials earlier in your job to set up AWS credentials."
+    );
+  }
+
 
   return { codeBuild, cloudWatchLogs };
 }
