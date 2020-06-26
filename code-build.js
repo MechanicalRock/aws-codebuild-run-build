@@ -153,7 +153,7 @@ function githubInputs() {
     "x-github-resolved-sha": sourceVersion,
     "x-github-event-name": process.env["GITHUB_EVENT_NAME"],
     "x-github-ref": process.env["GITHUB_REF"],
-    "x-github-action-id": process.env["GITHUB_RUN_ID"],
+    "x-github-run-id": process.env["GITHUB_RUN_ID"],
     "x-github-repository": repo,
     "x-github-organization": owner,
   };
