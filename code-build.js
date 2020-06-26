@@ -149,7 +149,9 @@ function githubInputs() {
 
   const headers = {
     "x-github-secret": process.env["GITHUB_SECRET"],
-    "x-github-sha": sourceVersion,
+    "x-github-sha": process.env["GITHUB_SHA"],
+    "x-github-resolved-sha": sourceVersion,
+    "x-github-event-name": process.env["GITHUB_EVENT_NAME"],
     "x-github-ref": process.env["GITHUB_REF"],
     "x-github-action-id": process.env["GITHUB_RUN_ID"],
     "x-github-repository": repo,
