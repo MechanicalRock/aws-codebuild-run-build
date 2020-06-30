@@ -30,7 +30,11 @@ function runBuild() {
 
 async function build(sdk, params, headers) {
   // Start the build
+  //const makeRequest = sdk.useCredentials ? sdk.codeBuild.makeRequest : sdk.codeBuild.makeUnauthenticatedRequest;
   const req = sdk.codeBuild.startBuild(params);
+  if (!sdk.useCredentials) {
+    req.toUnauthenticated();
+  }
   req.on("build", (req) => {
     req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
   });
@@ -45,6 +49,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
   const {
     codeBuild,
     cloudWatchLogs,
+    useCredentials,
     wait = 1000 * 30,
     backOff = 1000 * 15,
   } = sdk;
@@ -70,6 +75,11 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
   getLogEvents.on("build", (req) => {
     req.httpRequest.headers = { ...req.httpRequest.headers, ...headers };
   });
+
+  if (!useCredentials) {
+    batchGetBuilds.toUnauthenticated();
+    getLogEvents.toUnauthenticated();
+  }
 
   // Check the state
   const [batch, cloudWatch = {}] = await Promise.all([
@@ -226,7 +236,7 @@ function buildSdk() {
     );
   }
 
-  return { codeBuild, cloudWatchLogs };
+  return { codeBuild, cloudWatchLogs, useCredentials };
 }
 
 function logName(Arn) {
