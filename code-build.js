@@ -207,7 +207,7 @@ function inputs2Parameters(inputs) {
 
 function buildSdk() {
   const endpoint = { endpoint: core.getInput("endpoint", { required: false }) };
-  const noCredentials = !core.getInput("use-credentials", { required: false }).toUpperCase() === 'TRUE';
+  const useCredentials = core.getInput("use-credentials", { required: true }).toUpperCase() === 'TRUE';
 
   const codeBuild = new aws.CodeBuild({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
@@ -219,7 +219,7 @@ function buildSdk() {
     ...endpoint,
   });
 
-  if (!noCredentials) {
+  if (useCredentials) {
     assert(
       codeBuild.config.credentials && cloudWatchLogs.config.credentials,
       "No credentials. Try adding @aws-actions/configure-aws-credentials earlier in your job to set up AWS credentials."
