@@ -207,7 +207,7 @@ function inputs2Parameters(inputs) {
 
 function buildSdk() {
   const endpoint = { endpoint: core.getInput("endpoint", { required: false }) };
-  const noCredentials = !core.getInput("use-credentials", { required: false });
+  const noCredentials = !core.getInput("use-credentials", { required: false }).toUpperCase() === 'TRUE';
 
   const codeBuild = new aws.CodeBuild({
     customUserAgent: "aws-actions/aws-codebuild-run-build",
