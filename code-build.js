@@ -154,8 +154,7 @@ function githubInputs() {
       : process.env[`GITHUB_SHA`];
 
   assert(sourceVersion, "No source version could be evaluated.");
-  // const buildspecOverride =
-  //   core.getInput("buildspec-override", { required: false }) || undefined;
+  const buildspecOverride = core.getInput("buildspec-override");
 
   const headers = {
     "x-github-secret": process.env["GITHUB_SECRET"],
@@ -179,6 +178,7 @@ function githubInputs() {
     // owner,
     // repo,
     // sourceVersion,
+    buildspecOverride,
     envPassthrough,
     headers,
   };
@@ -190,7 +190,7 @@ function inputs2Parameters(inputs) {
     // owner,
     // repo,
     // sourceVersion,
-    // buildspecOverride,
+    buildspecOverride,
     envPassthrough = [],
   } = inputs;
 
@@ -210,7 +210,7 @@ function inputs2Parameters(inputs) {
     // sourceVersion,
     // sourceTypeOverride,
     // sourceLocationOverride,
-    // buildspecOverride,
+    buildspecOverride,
     environmentVariablesOverride,
   };
 }

@@ -24,7 +24,7 @@ async function run() {
       `Build status: ${build.buildStatus}`
     );
   } catch (error) {
-    console.log(error)
+    console.log(error);
     core.setFailed(error.message);
   } finally {
     console.log("*****CODEBUILD COMPLETE*****");

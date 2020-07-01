@@ -14,6 +14,10 @@ inputs:
     description: 'Comma separated list of environment variables to send to CodeBuild'
     required: false
     default: 'true'
+  buildspec-override:
+    description: 'Location of the buildspec file'
+    default: 'ci/build.spec.yaml'
+    required: true
 outputs:
   aws-build-id:
     description: 'The AWS CodeBuild Build ID for this build.'
