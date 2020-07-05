@@ -140,7 +140,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
 
 function githubInputs() {
   const projectName = core.getInput("project-name", { required: true });
-  const { owner, repo } = github.context.repo;
+  // const { owner, repo } = github.context.repo;
   const { payload } = github.context;
   // The github.context.sha is evaluated on import.
   // This makes it hard to test.
@@ -163,8 +163,7 @@ function githubInputs() {
     "x-github-event-name": process.env["GITHUB_EVENT_NAME"],
     "x-github-ref": process.env["GITHUB_REF"],
     "x-github-run-id": process.env["GITHUB_RUN_ID"],
-    "x-github-repository": repo,
-    "x-github-organization": owner,
+    "x-github-repository": process.env["GITHUB_REPOSITORY"],
   };
 
   const envPassthrough = core
@@ -197,6 +196,10 @@ function inputs2Parameters(inputs) {
   // const sourceTypeOverride = "GITHUB";
   // const sourceLocationOverride = `https://github.com/${owner}/${repo}.git`;
 
+  const sourceTypeOverride = core.getInput("source-type-override");
+  const sourceLocationOverride = sourceTypeOverride !== "NO_SOURCE" ?
+    core.getInput("source-location-override") : null
+
   const environmentVariablesOverride = Object.entries(process.env)
     .filter(
       ([key]) => key.startsWith("GITHUB_") || envPassthrough.includes(key)
@@ -208,8 +211,8 @@ function inputs2Parameters(inputs) {
   return {
     projectName,
     // sourceVersion,
-    // sourceTypeOverride,
-    // sourceLocationOverride,
+    sourceTypeOverride,
+    sourceLocationOverride,
     buildspecOverride,
     environmentVariablesOverride,
   };
@@ -217,7 +220,7 @@ function inputs2Parameters(inputs) {
 
 function buildSdk() {
   const endpoint = { endpoint: core.getInput("endpoint", { required: false }) };
-  const useCredentials = core.getInput("use-credentials", { required: true }).toUpperCase() === 'TRUE';
+  const useCredentials = core.getInput("use-aws-credentials", { required: true }).toUpperCase() === 'TRUE';
 
   const codeBuild = new aws.CodeBuild({
     customUserAgent: "aws-actions/aws-codebuild-run-build",

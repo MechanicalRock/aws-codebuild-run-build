@@ -10,14 +10,20 @@ inputs:
   endpoint:
     description: 'API endpoint'
     required: false
-  use-credentials:
-    description: 'Comma separated list of environment variables to send to CodeBuild'
+  use-aws-credentials:
+    description: 'Sign requests with aws-sigv4'
     required: false
     default: 'true'
+  source-location-override:
+    description: 'The S3 location of the zipped source code'
+    required: false
+  source-type-override:
+    description: 'The source type'
+    required: false
+    default: 'S3'
   buildspec-override:
-    description: 'Location of the buildspec file'
-    default: 'ci/build.spec.yaml'
-    required: true
+    description: 'The location of the buildspec file'
+    required: false
 outputs:
   aws-build-id:
     description: 'The AWS CodeBuild Build ID for this build.'
