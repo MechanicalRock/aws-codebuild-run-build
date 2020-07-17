@@ -33,11 +33,6 @@
     "mocha": "^7.1.1",
     "prettier": "^2.0.4"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
   "lint-staged": {
     "*.js": [
       "prettier --write --ignore-path dist/**",

@@ -7,11 +7,22 @@ inputs:
   project-name:
     description: 'AWS CodeBuild Project Name'
     required: true
-  buildspec-override:
-    description: 'Buildspec Override'
+  endpoint:
+    description: 'API endpoint'
     required: false
-  env-vars-for-codebuild:
-    description: 'Comma separated list of environment variables to send to CodeBuild'
+  use-aws-credentials:
+    description: 'Sign requests with aws-sigv4'
+    required: false
+    default: 'true'
+  source-location-override:
+    description: 'The S3 location of the zipped source code'
+    required: false
+  source-type-override:
+    description: 'The source type'
+    required: false
+    default: 'S3'
+  buildspec-override:
+    description: 'The location of the buildspec file'
     required: false
 outputs:
   aws-build-id:
