@@ -25,13 +25,13 @@ function runBuild() {
   const { headers } = inputs;
   const params = inputs2Parameters(inputs);
 
-  return build(sdk, params, headers);
+  return build(sdk, inputs.batch, params, headers);
 }
 
-async function build(sdk, params, headers) {
+async function build(sdk, batch, params, headers) {
   // Start the build
   //const makeRequest = sdk.useCredentials ? sdk.codeBuild.makeRequest : sdk.codeBuild.makeUnauthenticatedRequest;
-  const req = sdk.codeBuild.startBuild(params);
+  const req = batch ? sdk.codeBuild.startBuildBatch(params) : sdk.codeBuild.startBuild(params);
   if (!sdk.useCredentials) {
     req.toUnauthenticated();
   }
@@ -40,6 +40,11 @@ async function build(sdk, params, headers) {
   });
 
   const start = await req.promise();
+
+  if (batch) {
+    const { id, buildBatchStatus: buildStatus } = start.buildBatch;
+    return { id, buildStatus };
+  }
 
   // Wait for the build to "complete"
   return waitForBuildEndTime(sdk, start.build, null, headers);
@@ -129,7 +134,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
   events.forEach(({ message }) => console.log(message.trimEnd()));
 
   // We did it! We can stop looking!
-  if (current.endTime && !events.length) return current;
+  if (current.endTime && !events.length) return { id: current.id, buildStatus: current.buildStatus };
 
   // More to do: Sleep for a few seconds to avoid rate limiting
   await new Promise((resolve) => setTimeout(resolve, wait));
@@ -140,6 +145,7 @@ async function waitForBuildEndTime(sdk, { id, logs }, nextToken, headers) {
 
 function githubInputs() {
   const projectName = core.getInput("project-name", { required: true });
+  const batch = core.getInput("batch") === "true" ? true : false;
   // const { owner, repo } = github.context.repo;
   const { payload } = github.context;
   // The github.context.sha is evaluated on import.
@@ -176,6 +182,7 @@ function githubInputs() {
     // owner,
     // repo,
     // sourceVersion,
+    batch,
     buildspecOverride,
     envPassthrough,
     headers,

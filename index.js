@@ -15,13 +15,14 @@ module.exports = run;
 async function run() {
   console.log("*****STARTING CODEBUILD*****");
   try {
-    const build = await runBuild();
-    core.setOutput("aws-build-id", build.id);
+    const { id, buildStatus } = await runBuild();
+    core.setOutput("aws-build-id", id);
 
+    const status = new Set(["SUCCEEDED", "IN_PROGRESS"]);
     // Signal the outcome
     assert(
-      build.buildStatus === "SUCCEEDED",
-      `Build status: ${build.buildStatus}`
+      status.has(buildStatus),
+      `Build status: ${buildStatus}`
     );
   } catch (error) {
     console.log(error);
