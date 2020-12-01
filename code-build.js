@@ -42,7 +42,7 @@ async function build(sdk, batch, params, headers) {
   const start = await req.promise();
 
   if (batch) {
-    const { id, batchStatus: buildStatus } = start.buildBatch;
+    const { id, buildBatchStatus: buildStatus } = start.buildBatch;
     return { id, buildStatus };
   }
 
